@@ -11,29 +11,58 @@ from langchain.document_loaders import PyPDFLoader, TextLoader, JSONLoader, CSVL
 import tempfile # 임시 파일을 생성하기 위한 라이브러리입니다.
 import os
 from huggingface_hub import hf_hub_download # Hugging Face Hub에서 모델을 다운로드하기 위한 함수입니다.
-
+ #gdgdgdgdgd
 # PDF 문서로부터 텍스트를 추출하는 함수입니다.
 def get_pdf_text(pdf_docs):
     temp_dir = tempfile.TemporaryDirectory() # 임시 디렉토리를 생성합니다.
     temp_filepath = os.path.join(temp_dir.name, pdf_docs.name) # 임시 파일 경로를 생성합니다.
+    
     with open(temp_filepath, "wb") as f:  # 임시 파일을 바이너리 쓰기 모드로 엽니다.
         f.write(pdf_docs.getvalue()) # PDF 문서의 내용을 임시 파일에 씁니다.
+        
     pdf_loader = PyPDFLoader(temp_filepath) # PyPDFLoader를 사용해 PDF를 로드합니다.
     pdf_doc = pdf_loader.load() # 텍스트를 추출합니다.
     return pdf_doc # 추출한 텍스트를 반환합니다.
 
 # 과제
 # 아래 텍스트 추출 함수를 작성
-def get_text_file(docs):
-    pass    
+def get_text_file(text_docs):
+    temp_dir = tempfile.TemporaryDirectory()
+    temp_filepath = os.path.join(temp_dir.name, text_docs.name)
     
-def get_csv_file(docs):
-    pass
-
-def get_json_file(docs):
-    pass
-
+    with open(temp_filepath, "wb") as f:
+        f.write(text_docs.getvalue())
+        
+    text_loader = TextLoader(temp_filepath)
+    text_doc = text_loader.load()
+    return text_doc 
     
+def get_csv_file(csv_docs):
+    temp_dir = tempfile.TemporaryDirectory()
+    temp_filepath = os.path.join(temp_dir.name, csv_docs.name)
+    
+    with open(temp_filepath, "wb") as f:
+        f.write(csv_docs.getvalue())
+        
+    csv_loader = CSVLoader(temp_filepath)
+    csv_doc = csv_loader.load()
+    return csv_doc
+    
+
+def get_json_file(json_docs):
+    temp_dir = tempfile.TemporaryDirectory() # 임시 디렉토리를 생성합니다.
+    temp_filepath = os.path.join(temp_dir.name, json_docs.name) # 임시 파일 경로를 생성합니다.
+    with open(temp_filepath, "wb") as f:  # 임시 파일을 바이너리 쓰기 모드로 엽니다.
+        f.write(json_docs.getvalue()) # PDF 문서의 내용을 임시 파일에 씁니다.
+   
+    json_loader = JSONLoader(
+        file_path=temp_filepath,
+        jq_schema='.messages[].content',
+        text_content=False
+    )   
+    json_doc = json_loader.load()
+    return json_doc
+
 # 문서들을 처리하여 텍스트 청크로 나누는 함수입니다.
 def get_text_chunks(documents):
     text_splitter = RecursiveCharacterTextSplitter(
