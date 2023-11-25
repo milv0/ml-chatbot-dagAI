@@ -50,10 +50,10 @@ def get_csv_file(csv_docs):
     
 
 def get_json_file(json_docs):
-    temp_dir = tempfile.TemporaryDirectory() # 임시 디렉토리를 생성합니다.
-    temp_filepath = os.path.join(temp_dir.name, json_docs.name) # 임시 파일 경로를 생성합니다.
-    with open(temp_filepath, "wb") as f:  # 임시 파일을 바이너리 쓰기 모드로 엽니다.
-        f.write(json_docs.getvalue()) # PDF 문서의 내용을 임시 파일에 씁니다.
+    temp_dir = tempfile.TemporaryDirectory() 
+    temp_filepath = os.path.join(temp_dir.name, json_docs.name) 
+    with open(temp_filepath, "wb") as f:  
+        f.write(json_docs.getvalue()) 
    
     json_loader = JSONLoader(
         file_path=temp_filepath,
