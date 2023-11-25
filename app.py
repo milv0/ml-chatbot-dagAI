@@ -138,9 +138,10 @@ def main():
         handle_userinput(user_question)
 
     with st.sidebar:
+        st.subheader("박민규 / 201912064")
         st.subheader("Your documents")
         docs = st.file_uploader(
-            "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
+            "Upload File (pdf,text,csv...) and click 'Process'", accept_multiple_files=True)
         if st.button("Process"):
             with st.spinner("Processing"):
                 # get pdf text
