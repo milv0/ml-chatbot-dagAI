@@ -1,19 +1,16 @@
 import streamlit as st
 from dotenv import load_dotenv
-from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
-from langchain.vectorstores import FAISS, Chroma
+from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings  # General embeddings from HuggingFace models.
-from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
-from langchain.llms import HuggingFaceHub, LlamaCpp, CTransformers  # For loading transformer models.
+from langchain.llms import LlamaCpp  # For loading transformer models.
 from langchain.document_loaders import PyPDFLoader, TextLoader, JSONLoader, CSVLoader
 import tempfile # 임시 파일을 생성하기 위한 라이브러리입니다.
 import os
-
+from huggingface_hub import hf_hub_download # Hugging Face Hub에서 모델을 다운로드하기 위한 함수입니다.
 
 # PDF 문서로부터 텍스트를 추출하는 함수입니다.
 def get_pdf_text(pdf_docs):
@@ -27,11 +24,9 @@ def get_pdf_text(pdf_docs):
 
 # 과제
 # 아래 텍스트 추출 함수를 작성
-
 def get_text_file(docs):
-    pass
-
-
+    pass    
+    
 def get_csv_file(docs):
     pass
 
@@ -42,29 +37,33 @@ def get_json_file(docs):
 # 문서들을 처리하여 텍스트 청크로 나누는 함수입니다.
 def get_text_chunks(documents):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, # 청크의 크기를 지정합니다.
-        chunk_overlap=200, # 청크 사이의 중복을 지정합니다.
-        length_function=len # 텍스트의 길이를 측정하는 함수를 지정합니다.
+        chunk_size=1000,  # 청크의 크기를 지정합니다.
+        chunk_overlap=200,  # 청크 사이의 중복을 지정합니다.
+        length_function=len  # 텍스트의 길이를 측정하는 함수를 지정합니다.
     )
 
-    documents = text_splitter.split_documents(documents) # 문서들을 청크로 나눕니다
-    return documents # 나눈 청크를 반환합니다.
+    documents = text_splitter.split_documents(documents)  # 문서들을 청크로 나눕니다.
+    return documents  # 나눈 청크를 반환합니다.
 
 
 # 텍스트 청크들로부터 벡터 스토어를 생성하는 함수입니다.
 def get_vectorstore(text_chunks):
-    # OpenAI 임베딩 모델을 로드합니다. (Embedding models - Ada v2)
-
-    embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_documents(text_chunks, embeddings) # FAISS 벡터 스토어를 생성합니다.
-
-    return vectorstore # 생성된 벡터 스토어를 반환합니다.
+    # 원하는 임베딩 모델을 로드합니다.
+    embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L12-v2',
+                                       model_kwargs={'device': 'cpu'})  # 임베딩 모델을 설정합니다.
+    vectorstore = FAISS.from_documents(text_chunks, embeddings)  # FAISS 벡터 스토어를 생성합니다.
+    return vectorstore  # 생성된 벡터 스토어를 반환합니다.
 
 
 def get_conversation_chain(vectorstore):
-    gpt_model_name = 'gpt-3.5-turbo'
-    llm = ChatOpenAI(model_name = gpt_model_name) #gpt-3.5 모델 로드
-    
+    model_name_or_path = 'TheBloke/Llama-2-7B-chat-GGUF'
+    model_basename = 'llama-2-7b-chat.Q2_K.gguf'
+    model_path = hf_hub_download(repo_id=model_name_or_path, filename=model_basename)
+
+    llm = LlamaCpp(model_path=model_path,
+                   n_ctx=4086,
+                   input={"temperature": 0.75, "max_length": 2000, "top_p": 1},
+                   verbose=True, )
     # 대화 기록을 저장하기 위한 메모리를 생성합니다.
     memory = ConversationBufferMemory(
         memory_key='chat_history', return_messages=True)
@@ -74,10 +73,11 @@ def get_conversation_chain(vectorstore):
         retriever=vectorstore.as_retriever(),
         memory=memory
     )
-    return conversation_chain
+    return conversation_chain # 생성된 대화 체인을 반환합니다.
 
 # 사용자 입력을 처리하는 함수입니다.
 def handle_userinput(user_question):
+    print('user_question =>  ', user_question)
     # 대화 체인을 사용하여 사용자 질문에 대한 응답을 생성합니다.
     response = st.session_state.conversation({'question': user_question})
     # 대화 기록을 저장합니다.
@@ -103,16 +103,12 @@ def main():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
 
-    st.header("Chat with multiple Files :")
+    st.header("Chat with multiple Files:")
     user_question = st.text_input("Ask a question about your documents:")
     if user_question:
         handle_userinput(user_question)
 
     with st.sidebar:
-        openai_key = st.text_input("Paste your OpenAI API key (sk-...)")
-        if openai_key:
-            os.environ["OPENAI_API_KEY"] = openai_key
-
         st.subheader("Your documents")
         docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)

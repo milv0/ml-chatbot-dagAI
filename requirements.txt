@@ -11,4 +11,3 @@ streamlit-extras
 InstructorEmbedding
 sentence-transformers
 jq
-openai
